@@ -1,0 +1,28 @@
+{
+  "name": "prompt-compressor",
+  "version": "1.0.0",
+  "description": "A high-performance MCP server that compresses verbose prompts to save tokens while preserving 100% technical intent.",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "prompt-compressor": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "mcp",
+    "prompt-engineering",
+    "compression",
+    "token-optimization",
+    "ai",
+    "llm"
+  ],
+  "author": "Ezzio",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8"
+  }
+}
