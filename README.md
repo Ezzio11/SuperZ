@@ -375,7 +375,7 @@ $$\bar{r} = \frac{1}{n}\sum_{i=1}^{n}r_i$$
 
 - **Percent reduction**:
 
-$$R_{\%} = 100 \times \bar{r}$$
+$$\R_{\%} = 100 \times \bar{r}$$
 
 Provider-level reliability:
 
