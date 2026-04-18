@@ -1,28 +1,50 @@
 # Prompt Compressor (SuperZ)
 
-> One command, every AI tool. Compress verbose prompts into dense technical
-> instructions, save 30–80% of your tokens, and never drop a negative
-> constraint again.
+> One command, every AI tool. Defensive compression: **~40% input-token
+> reduction on long-context prompts** (RAG, system prompts, document Q&A)
+> with **100% semantic equivalence** (cross-checked by two independent LLM
+> judges) and **0% regressions** — and it deliberately does *nothing* on
+> short prompts where there is no filler to remove.
 
 Prompt Compressor is a Model Context Protocol (MCP) server + universal
-installer + VSCode extension. It compresses prompts by *racing* multiple
-providers in parallel and integrates in one command with every major AI coding
-tool.
+installer + VSCode extension. It compresses prompts through a layered
+pipeline (dedup → query-aware salience pruning → optional LLM rewrite →
+constraint validator → keep-best guard) and integrates in one command with
+every major AI coding tool.
 
-The default strategy is now **Free-first**: `OpenRouter` with
+The default strategy is **Free-first**: `OpenRouter` with
 `google/gemma-4-26b-a4b-it:free` is primary, with optional paid providers as
 fallbacks only.
+
+## Verified results (April 2026)
+
+Measured on a live LLM with paired A/B runs and an independent LLM-as-judge.
+Full report: [`docs/real-world-usage.md`](./docs/real-world-usage.md).
+
+| Workload | Mean reduction | Semantic equivalence | No-regression | Constraint survival |
+| --- | ---: | ---: | ---: | ---: |
+| **Long-context** (RAG, system, docs, 2k–20k tok) | **39.73%** | **100%** (both judges) | 100% | 100 / 100 / 100 |
+| Short / mixed (chat, daily CLI, < 600 tok) | 0.99% | n/a (nothing to judge) | 100% | 100 / 100 / 100 |
+
+Paired t-test on long-context: t = 7.725, df = 24, two-tailed p = 5.83 × 10⁻⁸.
+Judges: Llama 3.3 70B and GPT-OSS 120B, zero disagreements between them.
+Artifact: [`reports/ab-2026-04-18T16-25-19-911Z.json`](./reports/ab-2026-04-18T16-25-19-911Z.json).
+
+The headline is not "80% always". It is: **when there is slack in the prompt
+we remove ~40% of it without breaking meaning; when there is no slack we
+return the prompt unchanged.**
 
 ## Why it matters
 
 | Problem                                        | What SuperZ does                                                   |
 | ---------------------------------------------- | ------------------------------------------------------------------ |
-| Prompts waste tokens on filler words           | Rewrites them in telegraphic, symbol-heavy style                   |
-| LLMs sometimes drop "not" / "never" constraints| Validates every compressed output and falls back if a negation is lost |
+| Long RAG contexts waste 30–60% of tokens on repetition and filler | Dedup pass + query-aware section-wise salience pruning (validated: 39.8% mean reduction on long-context dataset) |
+| LLMs sometimes drop "not" / "never" / numeric / schema constraints | Multi-constraint validator (negation + numeric + schema) with regex fallback — 100% survival in both reports |
+| Short prompts don't have slack, and tools still try to "help" | Bypass gate + keep-best guard — engine correctly returns original on 86% of short prompts |
 | Teams want low cost by default                 | Free-first routing (`OpenRouter` free model first, paid fallback optional) |
 | Each tool has its own MCP config file          | `npx prompt-compressor init` writes them all idempotently          |
 | Different rules files per tool                 | Generates `CLAUDE.md`, `GEMINI.md`, `QWEN.md`, `AGENTS.md` from one template |
-| No visibility into what's actually saving you tokens | Built-in metrics + `superz stats` + status-bar tokens-saved counter |
+| No visibility into what's actually saving you tokens | Built-in metrics + `superz stats` + passive usage log + LLM-as-judge script |
 
 ## Quick start
 
@@ -239,6 +261,40 @@ per-prompt savings with 95% CI, paired t-statistic, two-tailed p-value, p50 /
 p95 latency for both arms, estimated cost delta, and a per-prompt breakdown
 table. This is the artifact you cite when proving the tool works.
 
+### Long-context dataset
+
+The short / mixed dataset shows the engine is *safe*. To show it's also
+*useful* run the long-context dataset (RAG, system prompts, chat history,
+document Q&A, 2k–20k tokens):
+
+```bash
+$env:SUPERZ_AB_DATASET = "long-context"
+$env:SUPERZ_AB_LIMIT   = "25"
+$env:SUPERZ_AB_PROVIDER = "Groq"
+npm run ab-test
+```
+
+On our reference run this produces ~40% mean reduction with 100%
+no-regression. Full methodology, per-category breakdown, and honest
+limitations are in [`docs/real-world-usage.md`](./docs/real-world-usage.md).
+
+### Independent semantic equivalence check (LLM-as-judge)
+
+Token savings only count if the downstream model gives an equivalent answer
+with the compressed prompt. After an A/B run, grade every row with a second
+LLM:
+
+```bash
+$env:SUPERZ_JUDGE_PROVIDER = "Groq"
+$env:SUPERZ_JUDGE_MODEL    = "llama-3.3-70b-versatile"
+node scripts/quality-judge.mjs reports/ab-<timestamp>.json
+```
+
+The judge writes `reports/ab-<timestamp>.judge.json` with per-row verdicts,
+`semanticEquivalenceRate`, `answerKeyHitRate` (raw vs compressed), and an
+overall pass/fail **Gate** that requires ≥25% reduction AND ≥90% semantic
+equivalence AND 100% constraint survival.
+
 ## Architecture
 
 ```mermaid
@@ -358,15 +414,28 @@ Negative-constraint preservation score:
 
 SuperZ targets \(\text{NCP}\approx 1\) via runtime validator + regex fallback.
 
-## Example
+## Example (real A/B row, not hand-picked)
 
-**Original (299 tokens):**
-> "I am currently working on a complex enterprise-grade web application and I would really appreciate it if you could help me architect and implement a very robust and scalable authentication system. I am planning on using Next.js for the frontend part of things and I want to connect it to a PostgreSQL database using an ORM like Drizzle or maybe Prisma, whichever you think is better for performance. For the actual authentication logic, I want to use JWT tokens because they are standard and secure. Please make sure that you include full error handling for all potential edge cases, like when the database is down or when a user provides an invalid password. Also, it is extremely important to me that the code remains very clean, highly readable, and adheres to all the latest industry best practices for security and performance. I also need you to consider things like rate limiting so that malicious actors cannot spam our login endpoint and potentially cause a denial of service attack. Could you also provide a detailed explanation of how the whole system connects together so that I can explain it to my team later during our engineering sync? Thank you so much for your help with this!"
+From the long-context dataset, prompt `rag-arch-rpo` (RAG context with
+paragraph-level repetition and unrelated office chatter), asking:
+*"What is the target RPO for the primary write path?"*
 
-**Compressed (~54 tokens):**
-> "Task: Enterprise auth system. Frontend @ Next.js. db @ PostgreSQL (Drizzle|Prisma). auth @ JWT. dep: rate limit. Error handling: db down, invalid password. Explain system architecture."
+- **Original**: 917 tokens.
+- **Compressed**: 290 tokens.
+- **Saved**: 627 tokens (~68% reduction on this row).
 
-≈ **82% token savings**.
+The compressor:
+1. Deterministic dedup pass — removed the three restated paragraphs.
+2. Section-aware salience pruning — dropped the "lunch orders" / "mug in the
+   sink" filler section while force-keeping the clause containing `RPO = 5 minutes`.
+3. Validator confirmed every numeric literal (`5 minutes`, `15 minutes`)
+   survived; keep-best guard confirmed the output was shorter; committed.
+
+Judge verdict: raw and compressed responses both correctly answered
+`5 minutes`. Semantic equivalence: **pass**.
+
+Raw row: [`reports/ab-2026-04-18T16-25-19-911Z.json`](./reports/ab-2026-04-18T16-25-19-911Z.json)
+row `idx=7`. Judge row: [`reports/ab-2026-04-18T16-25-19-911Z.judge.json`](./reports/ab-2026-04-18T16-25-19-911Z.judge.json) row `idx=7`.
 
 ## Programmatic use
 

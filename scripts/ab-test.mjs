@@ -26,6 +26,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { CompressionEngine, loadConfig } from "../dist/index.js";
+import { LONG_CONTEXT_PROMPTS } from "./datasets/long-context.mjs";
 
 // ----- Configuration -----------------------------------------------------
 
@@ -148,11 +149,25 @@ const LARGE_PROMPTS = [
   `Specify a full migration strategy from REST v1 to REST v2 for a public API used by third-party integrators. Maintain backward compatibility for 90 days, provide dual-write verification, never break webhook payload fields without version pinning, include canary rollout by customer cohort, publish deprecation headers, and define automatic rollback triggers for latency p95 increase above 25% or error rate increase above 1.5%.`,
 ];
 
-const CORPUS = [
-  ...SMALL_PROMPTS.map((prompt) => ({ prompt, sizeBucket: "small" })),
-  ...MEDIUM_PROMPTS.map((prompt) => ({ prompt, sizeBucket: "medium" })),
-  ...LARGE_PROMPTS.map((prompt) => ({ prompt, sizeBucket: "large" })),
+const DATASET_NAME = (process.env.SUPERZ_AB_DATASET ?? "mixed").toLowerCase();
+
+const MIXED_CORPUS = [
+  ...SMALL_PROMPTS.map((prompt) => ({ prompt, sizeBucket: "small", category: "mixed" })),
+  ...MEDIUM_PROMPTS.map((prompt) => ({ prompt, sizeBucket: "medium", category: "mixed" })),
+  ...LARGE_PROMPTS.map((prompt) => ({ prompt, sizeBucket: "large", category: "mixed" })),
 ];
+
+// Long-context dataset: every entry is large by construction (>=2k tokens),
+// because this is the regime where prompt compression actually pays off.
+const LONG_CONTEXT_CORPUS = LONG_CONTEXT_PROMPTS.map((item) => ({
+  prompt: item.prompt,
+  sizeBucket: "long",
+  category: item.category,
+  label: item.label,
+  expectedAnswerKey: item.expectedAnswerKey,
+}));
+
+const CORPUS = DATASET_NAME === "long-context" ? LONG_CONTEXT_CORPUS : MIXED_CORPUS;
 
 const MAX_PROMPTS = Math.min(LIMIT, CORPUS.length);
 const PROMPTS = CORPUS.slice(0, MAX_PROMPTS);
@@ -406,6 +421,7 @@ async function main() {
   console.log(`compressor   = ${compressionProviders[0].name}`);
   console.log(`target_model = ${TARGET_MODEL}`);
   console.log(`target_url   = ${TARGET_URL}`);
+  console.log(`dataset      = ${DATASET_NAME}`);
   console.log(`prompts      = ${PROMPTS.length} / ${CORPUS.length} available`);
   console.log(`max_tokens   = ${MAX_TOKENS}`);
   console.log(`sleep_ms     = ${SLEEP_MS}`);
@@ -464,6 +480,9 @@ async function main() {
     rows.push({
       idx: i + 1,
       sizeBucket: promptItem.sizeBucket,
+      category: promptItem.category ?? "mixed",
+      label: promptItem.label ?? `case-${i + 1}`,
+      expectedAnswerKey: promptItem.expectedAnswerKey ?? null,
       promptTier: compression.promptTier ?? promptItem.sizeBucket,
       provider: compression.provider,
       fallbackReason: compression.fallbackReason ?? "",
@@ -530,11 +549,14 @@ async function main() {
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
-  const bySize = {
-    small: summarizeBucket(rows, "small"),
-    medium: summarizeBucket(rows, "medium"),
-    large: summarizeBucket(rows, "large"),
-  };
+  const bySize =
+    DATASET_NAME === "long-context"
+      ? { long: summarizeBucket(rows, "long") }
+      : {
+          small: summarizeBucket(rows, "small"),
+          medium: summarizeBucket(rows, "medium"),
+          large: summarizeBucket(rows, "large"),
+        };
   const compressionPromptTotal = rows.reduce((acc, r) => acc + r.compressionPromptTokens, 0);
   const compressionCachedTotal = rows.reduce((acc, r) => acc + r.compressionCachedTokens, 0);
   const compressionCacheHitRate =
@@ -614,6 +636,7 @@ async function main() {
   const mdPath = resolve(reportDir, `ab-${stamp}.md`);
   const summary = {
     target: { model: TARGET_MODEL, url: TARGET_URL, maxTokens: MAX_TOKENS },
+    dataset: DATASET_NAME,
     pricing: { inputPerMillion: PRICE_IN, outputPerMillion: PRICE_OUT },
     aggregate: {
       n,
@@ -663,6 +686,7 @@ async function main() {
     `# SuperZ A/B Evaluation Report`,
     ``,
     `- Generated: ${new Date().toISOString()}`,
+    `- Dataset: \`${DATASET_NAME}\``,
     `- Target model: \`${TARGET_MODEL}\``,
     `- Endpoint: \`${TARGET_URL}\``,
     `- Prompts evaluated: **${n}**`,

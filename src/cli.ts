@@ -34,8 +34,16 @@ program
 program
   .command("stats")
   .description("Print cumulative compression metrics (latency, win-rate, tokens saved)")
-  .action(() => {
-    runStats();
+  .option(
+    "--from <source>",
+    "Source of stats: 'metrics' (default, cumulative process metrics) or 'usage-log' (real-world JSONL log)",
+    "metrics",
+  )
+  .option("--window <duration>", "Only used with --from=usage-log. Example: 7d, 24h, 30m")
+  .option("--path <path>", "Override usage log path (defaults to <SUPERZ_HOME>/usage.log.jsonl)")
+  .action((opts: { from?: string; window?: string; path?: string }) => {
+    const source = opts.from === "usage-log" ? "usage-log" : "metrics";
+    runStats({ source, window: opts.window, path: opts.path });
   });
 
 program

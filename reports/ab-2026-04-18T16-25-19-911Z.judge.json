@@ -1,0 +1,259 @@
+{
+  "report": "D:\\Projects\\SuperZ\\reports\\ab-2026-04-18T16-25-19-911Z.json",
+  "judge": {
+    "provider": "Groq",
+    "model": "openai/gpt-oss-120b"
+  },
+  "total": 25,
+  "evaluable": 19,
+  "semanticEquivalenceRate": 1,
+  "answerKeyRawHitRate": 1,
+  "answerKeyCompHitRate": 0.9473684210526315,
+  "perPrompt": [
+    {
+      "idx": 1,
+      "label": "rag-ratelimit-retry-after",
+      "expectedAnswerKey": "Retry-After",
+      "equivalent": true,
+      "reason": "Both answers correctly identify the required header as Retry-After and mention its format.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.6258205689277899,
+      "saved": 572
+    },
+    {
+      "idx": 2,
+      "label": "rag-ratelimit-key",
+      "expectedAnswerKey": "API key",
+      "equivalent": true,
+      "reason": "Both answers state the identifier is API key.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.5584415584415584,
+      "saved": 430
+    },
+    {
+      "idx": 3,
+      "label": "rag-legal-termination-days",
+      "expectedAnswerKey": "30 days",
+      "equivalent": true,
+      "reason": "Both answers state the agreement ends automatically after 30 days of non-payment.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.5249169435215947,
+      "saved": 316
+    },
+    {
+      "idx": 4,
+      "label": "rag-legal-liability-cap",
+      "expectedAnswerKey": "12 months",
+      "equivalent": true,
+      "reason": "Both answers state the same liability cap period",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.6406052963430012,
+      "saved": 508
+    },
+    {
+      "idx": 5,
+      "label": "rag-med-door-to-balloon",
+      "expectedAnswerKey": "90 minutes",
+      "equivalent": true,
+      "reason": "Both answers state the target is under 90 minutes.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.3708609271523179,
+      "saved": 224
+    },
+    {
+      "idx": 6,
+      "label": "rag-med-aspirin-dose",
+      "expectedAnswerKey": "325 mg",
+      "equivalent": true,
+      "reason": "Both answers state the same aspirin dose and condition.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.3694581280788177,
+      "saved": 150
+    },
+    {
+      "idx": 7,
+      "label": "rag-arch-rpo",
+      "expectedAnswerKey": "5 minutes",
+      "equivalent": true,
+      "reason": "Both answers state the RPO is under 5 minutes",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.6837513631406761,
+      "saved": 627
+    },
+    {
+      "idx": 8,
+      "label": "rag-arch-partition-key",
+      "expectedAnswerKey": "tenant_id",
+      "equivalent": true,
+      "reason": "Both answers state tenant_id is the Kafka partition key",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.6673936750272628,
+      "saved": 612
+    },
+    {
+      "idx": 9,
+      "label": "system-backend-agent",
+      "expectedAnswerKey": "ready",
+      "equivalent": true,
+      "reason": "Both responses are the single word 'ready', matching the expected key.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.4920273348519362,
+      "saved": 432
+    },
+    {
+      "idx": 10,
+      "label": "system-review-checklist",
+      "expectedAnswerKey": "timeout",
+      "equivalent": true,
+      "reason": "Both state the same network call requirement",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.4765714285714286,
+      "saved": 417
+    },
+    {
+      "idx": 11,
+      "label": "system-logging-rule",
+      "expectedAnswerKey": "secrets",
+      "equivalent": true,
+      "reason": "Both state that secrets (and related sensitive data) must not appear in logs.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.49257142857142855,
+      "saved": 431
+    },
+    {
+      "idx": 12,
+      "label": "system-sigterm-behavior",
+      "error": "Judge HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kpgebp1qfsrsa865602fn3ep` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6982, Req",
+      "equivalent": null
+    },
+    {
+      "idx": 13,
+      "label": "system-feature-flag-default",
+      "expectedAnswerKey": "off",
+      "equivalent": true,
+      "reason": "Both answers state that feature flags should default to off.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.49144811858608894,
+      "saved": 431
+    },
+    {
+      "idx": 14,
+      "label": "system-commit-policy",
+      "error": "Judge HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kpgebp1qfsrsa865602fn3ep` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6820, Req",
+      "equivalent": null
+    },
+    {
+      "idx": 15,
+      "label": "chat-idempotency-key",
+      "expectedAnswerKey": "event_id",
+      "equivalent": true,
+      "reason": "Both answers state the same field for the unique index.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0,
+      "saved": 0
+    },
+    {
+      "idx": 16,
+      "label": "chat-pii-fields",
+      "expectedAnswerKey": "cardholder",
+      "equivalent": true,
+      "reason": "Both answers correctly name email as a PII field to redact.",
+      "rawHasKey": true,
+      "compHasKey": false,
+      "reduction": 0,
+      "saved": 0
+    },
+    {
+      "idx": 17,
+      "label": "chat-retry-behavior",
+      "expectedAnswerKey": "unique",
+      "equivalent": true,
+      "reason": "Both answers convey the same explanation about unique constraint causing second insert to fail.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0,
+      "saved": 0
+    },
+    {
+      "idx": 18,
+      "label": "chat-migration-order",
+      "error": "Judge response not JSON: ",
+      "equivalent": null
+    },
+    {
+      "idx": 19,
+      "label": "chat-root-cause",
+      "expectedAnswerKey": "unique",
+      "equivalent": true,
+      "reason": "Both answers are identical and state the same cause.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0,
+      "saved": 0
+    },
+    {
+      "idx": 20,
+      "label": "chat-log-policy",
+      "expectedAnswerKey": "redact",
+      "equivalent": true,
+      "reason": "Both answers are identical and convey the same instruction.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0,
+      "saved": 0
+    },
+    {
+      "idx": 21,
+      "label": "doc-max-depth-default",
+      "expectedAnswerKey": "64",
+      "equivalent": true,
+      "reason": "Both answers state the default maxDepth is 64",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.5112704918032787,
+      "saved": 499
+    },
+    {
+      "idx": 22,
+      "label": "doc-benchmarks-throughput",
+      "error": "Judge HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kpgebp1qfsrsa865602fn3ep` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6846, Req",
+      "equivalent": null
+    },
+    {
+      "idx": 23,
+      "label": "doc-after-error",
+      "error": "Judge response not JSON: {\"equivalent\": true, \"reason\": \"Both answers state the parser cannot",
+      "equivalent": null
+    },
+    {
+      "idx": 24,
+      "label": "doc-license",
+      "expectedAnswerKey": "MIT",
+      "equivalent": true,
+      "reason": "Both answers state the library uses the MIT license.",
+      "rawHasKey": true,
+      "compHasKey": true,
+      "reduction": 0.5123203285420944,
+      "saved": 499
+    },
+    {
+      "idx": 25,
+      "label": "doc-json5",
+      "error": "Judge HTTP 429: {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01kpgebp1qfsrsa865602fn3ep` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7076, Req",
+      "equivalent": null
+    }
+  ]
+}

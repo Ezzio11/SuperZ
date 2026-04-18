@@ -12,11 +12,12 @@ import { MetricsStore, getMetrics } from "../util/metrics.js";
 import { tagged } from "../util/logger.js";
 import { SYSTEM_PROMPT } from "./system-prompt.js";
 import { ruleBasedCompress } from "./rules.js";
-import { adaptiveKeepRatio, PromptSizeTier, pruneBySalience } from "./salience.js";
+import { adaptiveKeepRatio, PromptSizeTier, pruneSectionAware } from "./salience.js";
 import { sanitizeCompression } from "./sanitize.js";
 import { ConstraintValidationReport, verifyConstraints } from "./validator.js";
 import { computeDelta, countTokens, TokenDelta } from "./tokenizer.js";
 import { callAdvancedCompressor } from "./advanced-compressor.js";
+import { appendUsage, usageLogEnabled } from "../util/usage-log.js";
 
 const log = tagged("engine");
 
@@ -199,11 +200,29 @@ export class CompressionEngine {
 
   private extractiveCompact(prompt: string, tier: PromptSizeTier): string {
     let out = prompt;
-    if (this.compression.queryAwarePruning && tier !== "small") {
-      out = pruneBySalience(out, adaptiveKeepRatio(out, tier), tier);
-    }
+    // Apply dedup / filler removal BEFORE salience pruning so that repeated
+    // filler paragraphs don't dominate the clause-scoring budget.
     out = ruleBasedCompress(out);
+    if (this.compression.queryAwarePruning && tier !== "small") {
+      out = pruneSectionAware(out, adaptiveKeepRatio(out, tier), tier);
+    }
     return sanitizeCompression(out);
+  }
+
+  /**
+   * Dynamic floor for "is it worth calling the LLM compressor?".
+   *
+   * - For short prompts we keep the configured fixed threshold to avoid
+   *   LLM preamble overhead eating the gain.
+   * - For long prompts we also accept a ratio-based floor (5% of the
+   *   original) so that a 4000-token prompt becomes worth trying even
+   *   when the extractive stage already shaved some tokens.
+   */
+  private minGainForTokens(tokens: number): number {
+    const fixed = this.compression.minExpectedGainTokens;
+    if (tokens <= this.compression.mediumPromptMaxTokens) return fixed;
+    const dynamic = Math.ceil(tokens * 0.05);
+    return Math.max(1, Math.min(fixed, dynamic));
   }
 
   private validateCandidate(
@@ -221,6 +240,34 @@ export class CompressionEngine {
     return candidateTokens <= originalTokens + this.compression.maxExpansionAllowed;
   }
 
+  private logUsage(entry: {
+    inputTokens: number;
+    outputTokens: number;
+    saved: number;
+    reductionRatio: number;
+    provider: string;
+    tier?: PromptSizeTier;
+    bypassed: boolean;
+    cacheHit: boolean;
+    constraintOk: boolean;
+    fallbackReason?: string;
+  }): void {
+    if (!usageLogEnabled()) return;
+    appendUsage({
+      ts: new Date().toISOString(),
+      inputTokens: entry.inputTokens,
+      outputTokens: entry.outputTokens,
+      saved: entry.saved,
+      reductionRatio: entry.reductionRatio,
+      provider: entry.provider,
+      tier: entry.tier,
+      bypassed: entry.bypassed,
+      cacheHit: entry.cacheHit,
+      constraintOk: entry.constraintOk,
+      fallbackReason: entry.fallbackReason,
+    });
+  }
+
   async compress(prompt: string, options: CompressOptions = {}): Promise<CompressionResult> {
     const promptTokens = countTokens(prompt);
     const promptTier = this.tierForTokens(promptTokens);
@@ -230,6 +277,17 @@ export class CompressionEngine {
         originalTokens: delta.originalTokens,
         compressedTokens: delta.compressedTokens,
         bypassed: true,
+      });
+      this.logUsage({
+        inputTokens: delta.originalTokens,
+        outputTokens: delta.compressedTokens,
+        saved: 0,
+        reductionRatio: 0,
+        provider: "bypass",
+        tier: promptTier,
+        bypassed: true,
+        cacheHit: false,
+        constraintOk: true,
       });
       return {
         compressed: prompt,
@@ -257,12 +315,25 @@ export class CompressionEngine {
           compressedTokens: delta.compressedTokens,
           cacheHit: true,
         });
+        this.logUsage({
+          inputTokens: delta.originalTokens,
+          outputTokens: delta.compressedTokens,
+          saved: delta.savedTokens,
+          reductionRatio:
+            delta.originalTokens > 0 ? delta.savedTokens / delta.originalTokens : 0,
+          provider: `${cached.provider} (cached)`,
+          tier: promptTier,
+          bypassed: false,
+          cacheHit: true,
+          constraintOk: true,
+        });
         return {
           compressed: cached.compressed,
           provider: `${cached.provider} (cached)`,
           bypassed: false,
           cacheHit: true,
           errors: [],
+          promptTier,
           ...delta,
         };
       }
@@ -308,7 +379,8 @@ export class CompressionEngine {
     const allowRewriteForTier =
       promptTier === "large" ||
       (promptTier === "medium" && this.compression.allowLlmRewriteForMedium);
-    const shouldTryLlm = allowRewriteForTier && expectedGain >= this.compression.minExpectedGainTokens;
+    const minGain = this.minGainForTokens(originalTokenCount);
+    const shouldTryLlm = allowRewriteForTier && expectedGain >= minGain;
     if (promptTier === "large") {
       const sidecar = await callAdvancedCompressor(this.advancedCompressor, prompt, originalTokenCount);
       if (sidecar) {
@@ -385,6 +457,20 @@ export class CompressionEngine {
     this.metrics.recordRequest({
       originalTokens: delta.originalTokens,
       compressedTokens: delta.compressedTokens,
+    });
+
+    this.logUsage({
+      inputTokens: delta.originalTokens,
+      outputTokens: delta.compressedTokens,
+      saved: delta.savedTokens,
+      reductionRatio:
+        delta.originalTokens > 0 ? delta.savedTokens / delta.originalTokens : 0,
+      provider,
+      tier: promptTier,
+      bypassed: false,
+      cacheHit: false,
+      constraintOk: constraintReport?.preserved ?? true,
+      fallbackReason,
     });
 
     return {

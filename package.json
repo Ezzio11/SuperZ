@@ -41,6 +41,7 @@
     "test:coverage": "vitest run --coverage",
     "benchmark": "node scripts/benchmark.mjs",
     "ab-test": "node scripts/ab-test.mjs",
+    "quality-judge": "node scripts/quality-judge.mjs",
     "prepublishOnly": "npm run build",
     "release": "npm run build && npm publish --provenance --access public"
   },

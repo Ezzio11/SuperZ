@@ -5,6 +5,12 @@
  * or "never" silently corrupts the user's intent in the worst way.
  */
 
+// Negation anchors, restricted to verb/directive forms so that we don't
+// flag every lexical use of words like "rejected" or "forbidden" that
+// commonly appear in prose or enum lists ("allowed, rejected, errored").
+// Adjectival / past-participle forms are intentionally excluded because
+// they are ambiguous and produce too many false positives on long RAG
+// contexts. We keep base verb forms that are almost always imperative.
 const NEGATION_WORDS = [
   "not",
   "never",
@@ -14,17 +20,11 @@ const NEGATION_WORDS = [
   "avoid",
   "disallow",
   "forbid",
-  "forbidden",
-  "disabled",
   "disable",
   "prohibit",
-  "prohibited",
   "exclude",
-  "excluded",
   "deny",
-  "denied",
   "reject",
-  "rejected",
   "must not",
   "do not",
   "don't",
