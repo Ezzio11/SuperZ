@@ -354,65 +354,127 @@ enforces this with a two-layer guarantee:
 ## Statistical foundation
 
 Compression quality in SuperZ is evaluated as a token-level effect size over a
-prompt sample set of size \(n\).
+prompt sample set of size $n$.
 
 Let:
 
-- \(T_i^{(o)}\): original token count for prompt \(i\).
-- \(T_i^{(c)}\): compressed token count for prompt \(i\).
-- \(\Delta_i = T_i^{(o)} - T_i^{(c)}\): saved tokens for prompt \(i\).
-- \(r_i = \dfrac{\Delta_i}{T_i^{(o)}}\): per-prompt reduction ratio.
+- $T_i^{(o)}$: original token count for prompt $i$.
+- $T_i^{(c)}$: compressed token count for prompt $i$.
+- $\Delta_i = T_i^{(o)} - T_i^{(c)}$: saved tokens for prompt $i$.
+- $r_i = \dfrac{\Delta_i}{T_i^{(o)}}$: per-prompt reduction ratio.
 
 Core metrics:
 
 - **Mean absolute savings**:
-  \[
-  \bar{\Delta} = \frac{1}{n}\sum_{i=1}^{n}\Delta_i
-  \]
+
+$$\bar{\Delta} = \frac{1}{n}\sum_{i=1}^{n}\Delta_i$$
+
 - **Mean reduction ratio**:
-  \[
-  \bar{r} = \frac{1}{n}\sum_{i=1}^{n}r_i
-  \]
+
+$$\bar{r} = \frac{1}{n}\sum_{i=1}^{n}r_i$$
+
 - **Percent reduction**:
-  \[
-  R_{\%} = 100 \times \bar{r}
-  \]
+
+$$R_{\%} = 100 \times \bar{r}$$
 
 Provider-level reliability:
 
-- **Win rate** for provider \(p\):
-  \[
-  \text{WinRate}_p = \frac{W_p}{A_p}
-  \]
-  where \(W_p\) is number of race wins and \(A_p\) total attempts.
+- **Win rate** for provider $p$:
+
+$$\text{WinRate}_p = \frac{W_p}{A_p}$$
+
+where $W_p$ is number of race wins and $A_p$ total attempts.
 
 - **Failure rate**:
-  \[
-  \text{FailRate}_p = \frac{F_p}{A_p}
-  \]
+
+$$\text{FailRate}_p = \frac{F_p}{A_p}$$
 
 Latency quantiles:
 
-- Given latency samples \(L_p = \{ \ell_1,\dots,\ell_m \}\), we report
-  \(Q_{0.50}(L_p)\) and \(Q_{0.95}(L_p)\) (p50, p95) as robust performance
+- Given latency samples $L_p = \\{ \ell_1,\dots,\ell_m \\}$, we report
+  $Q_{0.50}(L_p)$ and $Q_{0.95}(L_p)$ (p50, p95) as robust performance
   summaries in `superz stats`.
+
+Paired A/B test. Because each prompt is evaluated twice (raw and compressed)
+on the same target model, we analyse the per-prompt savings $\Delta_i$ with a
+paired two-sided $t$-test:
+
+$$t = \frac{\bar{\Delta}}{s_\Delta / \sqrt{n}}, \quad \text{df} = n - 1$$
+
+where $s_\Delta$ is the sample standard deviation of $\Delta_i$. The
+reported p-value is the two-tailed tail probability of this statistic.
 
 Confidence interval for mean reduction (normal approximation):
 
-\[
-\bar{r} \pm z_{0.975}\frac{s_r}{\sqrt{n}}
-\]
+$$\bar{r} \pm z_{0.975}\frac{s_r}{\sqrt{n}}$$
 
-where \(s_r\) is sample standard deviation of \(r_i\) and \(z_{0.975}\approx1.96\).
-For heavy-tailed workloads, bootstrap CIs are preferred.
+where $s_r$ is the sample standard deviation of $r_i$ and
+$z_{0.975}\approx 1.96$. For heavy-tailed workloads, bootstrap CIs are
+preferred.
 
 Negative-constraint preservation score:
 
-\[
-\text{NCP} = \frac{\sum_{i=1}^{n} \mathbf{1}[\text{all neg constraints preserved on } i]}{n}
-\]
+$$\text{NCP} = \frac{\sum_{i=1}^{n} \mathbf{1}[\text{all neg constraints preserved on } i]}{n}$$
 
-SuperZ targets \(\text{NCP}\approx 1\) via runtime validator + regex fallback.
+SuperZ targets $\text{NCP}\approx 1$ via runtime validator + regex fallback.
+
+Semantic equivalence (LLM judge):
+
+$$\text{SemEq} = \frac{1}{|E|}\sum_{i \in E} \mathbf{1}[\text{judge}(y_i^{(o)},\, y_i^{(c)}) = \text{equivalent}]$$
+
+where $y_i^{(o)}$ and $y_i^{(c)}$ are the target model's answers on the raw
+and compressed prompt and $E$ is the set of rows the judge could evaluate
+(non-errored).
+
+## Related work and design influences
+
+Prompt compression is an active research area. SuperZ is a pragmatic
+productised pipeline rather than a novel compression algorithm, but the
+design choices below are directly informed by four lines of prior work.
+Readers interested in the underlying ideas should start with these:
+
+- **LLMLingua** — Jiang et al., *"LLMLingua: Compressing Prompts for
+  Accelerated Inference of Large Language Models"*, EMNLP 2023.
+  [arXiv:2310.05736](https://arxiv.org/abs/2310.05736).
+  Introduced coarse-to-fine, budget-controlled token-level pruning driven
+  by a small LM's perplexity. SuperZ borrows the **budget-controller
+  mindset** (adaptive keep-ratio by prompt size tier) but uses
+  deterministic rule + query-aware salience scoring instead of a
+  perplexity model, so it runs with zero local GPU dependency.
+
+- **LongLLMLingua** — Jiang et al., *"LongLLMLingua: Accelerating and
+  Enhancing LLMs in Long Context Scenarios via Prompt Compression"*.
+  [arXiv:2310.06839](https://arxiv.org/abs/2310.06839).
+  Shows that a *question-aware* compressor strongly outperforms
+  question-agnostic compression on long contexts. This paper is the
+  direct inspiration for SuperZ's query-extraction + query-anchored
+  salience scoring + force-keep-on-query-match logic in
+  [`src/engine/salience.ts`](src/engine/salience.ts).
+
+- **LLMLingua-2** — Pan et al., *"LLMLingua-2: Data Distillation for
+  Efficient and Faithful Task-Agnostic Prompt Compression"*, ACL Findings
+  2024. [arXiv:2403.12968](https://arxiv.org/abs/2403.12968).
+  Reframes compression as token-classification learned via distillation
+  for faithfulness and lower latency. SuperZ's optional
+  `advancedCompressor` sidecar (scaffolded in
+  [`src/engine/advanced-compressor.ts`](src/engine/advanced-compressor.ts))
+  is designed as a drop-in target for a LLMLingua-2-style encoder when
+  local inference is acceptable.
+
+- **Selective Context** — Li et al., *"Compressing Context to Enhance
+  Inference Efficiency of Large Language Models"*, EMNLP 2023.
+  [arXiv:2310.06201](https://arxiv.org/abs/2310.06201).
+  Establishes that removing redundancy (lexical, syntactic, and sentence
+  level) can cut ~50% of context with only a minor drop in BERTscore and
+  faithfulness on RAG-style tasks. SuperZ's deterministic dedup pass +
+  section-aware pruning follow the same "remove what the model doesn't
+  need to see twice" principle.
+
+What SuperZ is, in one line: a **productised, zero-GPU, MCP-native**
+version of these ideas with explicit safety gates (multi-constraint
+validator + keep-best guard) and an LLM-as-judge acceptance test, so the
+savings and the preservation claims can be reproduced on your own machine
+with free-tier providers.
 
 ## Example (real A/B row, not hand-picked)
 
