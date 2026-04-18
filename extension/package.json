@@ -1,0 +1,130 @@
+{
+  "name": "prompt-compressor",
+  "displayName": "Prompt Compressor (SuperZ)",
+  "description": "Compress verbose prompts before sending them to AI assistants. Works with GitHub Copilot, Cursor, Continue.dev, Antigravity, and any MCP-compatible extension.",
+  "version": "2.0.0",
+  "publisher": "ezzio",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ezzio11/prompt-compressor.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["AI", "Other", "Chat"],
+  "keywords": [
+    "ai",
+    "prompt",
+    "compression",
+    "token",
+    "mcp",
+    "copilot",
+    "cursor"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "promptCompressor.compressSelection",
+        "title": "Prompt Compressor: Compress Selection",
+        "category": "Prompt Compressor"
+      },
+      {
+        "command": "promptCompressor.compressClipboard",
+        "title": "Prompt Compressor: Compress Clipboard",
+        "category": "Prompt Compressor"
+      },
+      {
+        "command": "promptCompressor.toggleAutoCompressPaste",
+        "title": "Prompt Compressor: Toggle Auto-Compress on Paste",
+        "category": "Prompt Compressor"
+      },
+      {
+        "command": "promptCompressor.openStats",
+        "title": "Prompt Compressor: Open Session Stats",
+        "category": "Prompt Compressor"
+      },
+      {
+        "command": "promptCompressor.setApiKey",
+        "title": "Prompt Compressor: Set API Key",
+        "category": "Prompt Compressor"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "promptCompressor.compressSelection",
+        "key": "ctrl+alt+k",
+        "mac": "cmd+alt+k",
+        "when": "editorHasSelection"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "promptCompressor.compressSelection",
+          "when": "editorHasSelection",
+          "group": "1_modification"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Prompt Compressor",
+      "properties": {
+        "promptCompressor.autoCompressOnPaste": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically compress long pasted text (>20 words)."
+        },
+        "promptCompressor.mcpServer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Register the bundled MCP server with VSCode/Copilot/Cursor automatically."
+        },
+        "promptCompressor.providers.cerebras.model": {
+          "type": "string",
+          "default": "llama-3.3-70b",
+          "description": "Cerebras model to use."
+        },
+        "promptCompressor.providers.groq.model": {
+          "type": "string",
+          "default": "llama-3.1-8b-instant",
+          "description": "Groq model to use."
+        },
+        "promptCompressor.providers.google.model": {
+          "type": "string",
+          "default": "gemini-2.0-flash",
+          "description": "Google Gemini model to use."
+        },
+        "promptCompressor.log.level": {
+          "type": "string",
+          "enum": ["silent", "error", "warn", "info", "debug"],
+          "default": "info",
+          "description": "Log verbosity for the bundled MCP server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsup",
+    "watch": "tsup --watch",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "publish:ovsx": "ovsx publish"
+  },
+  "dependencies": {
+    "prompt-compressor": "file:.."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.1",
+    "ovsx": "^0.10.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  }
+}

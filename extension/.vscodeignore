@@ -1,0 +1,7 @@
+.vscode/**
+src/**
+node_modules/**
+!node_modules/prompt-compressor/**
+tsconfig.json
+tsup.config.ts
+*.map

@@ -1,0 +1,26 @@
+services:
+  prompt-compressor:
+    build: .
+    image: ghcr.io/ezzio11/prompt-compressor:latest
+    container_name: prompt-compressor
+    restart: unless-stopped
+    ports:
+      - "7420:7420"
+    environment:
+      SUPERZ_LOG: ${SUPERZ_LOG:-info}
+      CEREBRAS_API_KEY: ${CEREBRAS_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      HF_API_KEY: ${HF_API_KEY:-}
+      SUPERZ_HTTP_TOKEN: ${SUPERZ_HTTP_TOKEN:-}
+    volumes:
+      - superz-data:/home/superz/.superz
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7420/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  superz-data:

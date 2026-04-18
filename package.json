@@ -1,28 +1,104 @@
 {
   "name": "prompt-compressor",
-  "version": "1.0.0",
-  "description": "A high-performance MCP server that compresses verbose prompts to save tokens while preserving 100% technical intent.",
+  "version": "2.0.0",
+  "description": "Production-grade MCP server + universal installer that compresses verbose prompts across Claude Code, Cursor, VSCode, Gemini CLI, Qwen Code, Codex CLI and every other MCP-speaking client.",
   "type": "module",
-  "main": "index.js",
-  "bin": {
-    "prompt-compressor": "./index.js"
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./engine": {
+      "types": "./dist/engine/index.d.ts",
+      "import": "./dist/engine/index.js"
+    }
   },
+  "bin": {
+    "superz": "./dist/cli.js",
+    "prompt-compressor": "./dist/server.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/server.js",
+    "cli": "node dist/cli.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{json,md}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{json,md}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "benchmark": "node scripts/benchmark.mjs",
+    "ab-test": "node scripts/ab-test.mjs",
+    "prepublishOnly": "npm run build",
+    "release": "npm run build && npm publish --provenance --access public"
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "prompt-engineering",
-    "compression",
+    "prompt-compression",
     "token-optimization",
-    "ai",
-    "llm"
+    "llm",
+    "claude",
+    "cursor",
+    "vscode",
+    "gemini",
+    "qwen",
+    "codex",
+    "ai-tools"
   ],
-  "author": "Ezzio",
+  "author": "Ezzio & Samahy",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ezzio11/prompt-compressor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ezzio11/prompt-compressor/issues"
+  },
+  "homepage": "https://github.com/Ezzio11/prompt-compressor#readme",
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "commander": "^12.1.0",
+    "consola": "^3.2.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "gpt-tokenizer": "^2.9.0",
+    "lru-cache": "^11.0.2",
+    "prompts": "^2.4.2",
+    "yaml": "^2.6.1",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "@types/prompts": "^2.4.9",
+    "@eslint/js": "^9.15.0",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "@vitest/coverage-v8": "^2.1.5",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "typescript-eslint": "^8.15.0",
+    "prettier": "^3.4.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.5"
   }
 }
